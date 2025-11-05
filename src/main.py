@@ -3,6 +3,7 @@ import numpy as np
 from utils.stack_images import stack_images
 from utils.contour_detection import get_contours
 from camera.webcam import init_camera
+from utils.color_detection import detect_color
 from config import *
 
 def callback(x):
@@ -33,6 +34,8 @@ while True:
     vid_dilated = cv.dilate(vid_canny, kernel, iterations=1)
 
     get_contours(vid_dilated, vid_contours, min_area, WINDOW_NAME)
+    color_detected = detect_color(vid)
+    cv.putText(vid_contours, f"Color: {color_detected}", (30, 50), cv.FONT_HERSHEY_SIMPLEX, 1,(0,255,255),2)
 
     combined = stack_images(
         0.8,

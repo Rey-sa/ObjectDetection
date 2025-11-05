@@ -34,7 +34,17 @@ while True:
 
     get_contours(vid_dilated, vid_contours, min_area, WINDOW_NAME)
 
-    combined = stack_images(0.8, ([vid, vid_gray, vid_canny], [vid_dilated, vid_contours,vid_dilated]))
+    combined = stack_images(
+        0.8,
+        [
+            [vid, vid_blur, vid_gray],
+            [vid_canny, vid_dilated, vid_contours]
+        ],
+        labels=[
+            ["Original", "Blur", "Gray"],
+            ["Canny", "Dilated", "Contours"]
+        ]
+    )
 
     cv.imshow(WINDOW_NAME, combined)
     if cv.waitKey(1) & 0xFF == ord('q'):

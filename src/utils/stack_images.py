@@ -17,6 +17,24 @@ def stack_images(scale: float,
     Returns:
         stack: Stacked image (np.ndarray)
     """
+
+    def process_image(vid: np.ndarray, label: str, width: int, height: int) -> np.ndarray:
+        """Helper function to process a single image."""
+        # Resize
+        if vid.shape[:2] != (height, width):
+            vid = cv2.resize(vid, (width, height), interpolation=cv2.INTER_AREA)
+        vid = cv2.resize(vid, (0, 0), fx=scale, fy=scale)
+
+        # Grayscale to BGR
+        if len(vid.shape) == 2:
+            vid = cv2.cvtColor(vid, cv2.COLOR_GRAY2BGR)
+
+        # Add label
+        if label:
+            cv2.putText(vid, label, (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_8)
+        return vid
+
     rows = len(vid_array)
     rows_available = isinstance(vid_array[0], list)
     cols = len(vid_array[0]) if rows_available else len(vid_array)
@@ -34,24 +52,7 @@ def stack_images(scale: float,
     if rows_available:
         for x in range(rows):
             for y in range(cols):
-                img = vid_array[x][y]
-
-                # Resize
-                if img.shape[:2] != (height, width):
-                    img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
-                img = cv2.resize(img, (0, 0), fx=scale, fy=scale)  # zusätzlich skalieren
-
-                # Grayscale to BGR
-                if len(img.shape) == 2:
-                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-                # Add label
-                text = str(labels[x][y])
-                if text:
-                    cv2.putText(img, text, (10, 30),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-                vid_array[x][y] = img
+                vid_array[x][y] = process_image(vid_array[x][y], str(labels[x][y]), width, height)
 
         # Horizontal / vertical adding
         hor = [np.hstack(vid_array[x]) for x in range(rows)]
@@ -59,20 +60,7 @@ def stack_images(scale: float,
 
     else:
         for x in range(rows):
-            img = vid_array[x]
-
-            if img.shape[:2] != (height, width):
-                img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
-            img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
-
-            if len(img.shape) == 2:
-                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-            text = str(labels[x])
-            if text:
-                cv2.putText(img, text, (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_8)
-            vid_array[x] = img
+            vid_array[x] = process_image(vid_array[x], str(labels[x]), width, height)
 
         stack = np.hstack(vid_array)
 

@@ -33,9 +33,7 @@ while True:
     kernel = np.ones((5,5))
     vid_dilated = cv.dilate(vid_canny, kernel, iterations=1)
 
-    get_contours(vid_dilated, vid_contours, min_area, WINDOW_NAME)
-    color_detected = detect_color(vid)
-    cv.putText(vid_contours, f"Color: {color_detected}", (30, 50), cv.FONT_HERSHEY_SIMPLEX, 1,(0,255,255),2)
+    get_contours(vid_dilated, vid_contours, vid, min_area, WINDOW_NAME)
 
     combined = stack_images(
         0.8,

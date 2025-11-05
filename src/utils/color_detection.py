@@ -1,41 +1,34 @@
 import cv2
 import cv2 as cv
 import numpy as np
+from .get_limits import get_limits
 
-COLOR_RANGES = {
-    "RED": [(0, 120, 70), (10, 255, 255)],
-    "RED2": [(170,120,70), (180, 255, 255)],
-    "GREEN": [(36, 50, 70), (89, 255, 255)],
-    "BLUE": [(90, 50, 70), (128, 255, 255)],
-    "YELLOW": [(20, 100, 100), (35, 255, 255)],
-    "ORANGE": [(10, 100, 100), (20, 255, 255)]
+COLOR_MAP = {
+    "RED": [0, 0, 255],
+    "GREEN": [0, 255, 0],
+    "BLUE": [255, 0, 0],
+    "YELLOW": [0, 255, 255]
 }
 
-def detect_color(frame):
+def detect_color(roi_bgr):
     """
     Detects dominant colors in an videostream based on HSV color ranges.
 
     Returns:
-        dominant_color: String or unknown
+        detected_color: String or unknown
     """
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    detected_colors = {}
+    hsv = cv.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+    max_pixels = 0
+    detected_color = "Unknown"
 
-    for color_name, (lower, upper) in COLOR_RANGES.items():
-        mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
-        color_pixels = cv2.countNonZero(mask)
-        detected_colors[color_name] = color_pixels
+    for name, bgr in COLOR_MAP.items():
+        lower, upper = get_limits(bgr)
+        mask = cv2.inRange(hsv, lower, upper)
+        pixels = cv2.countNonZero(mask)
 
-    # Red has 2 areas: Need to add
-    total_red = detected_colors.get("RED",0) + detected_colors.get("RED2",0)
-    detected_colors["RED"] = total_red
-    detected_colors.pop("RED2", None)
+        if pixels > max_pixels:
+            max_pixels = pixels
+            detected_color = name
 
-    # Find dominant color
-    dominant_color = max(detected_colors, key=detected_colors.get)
-
-    if detected_colors[dominant_color] < 1000:
-        return "Unknown"
-
-    return dominant_color
+    return detected_color
 

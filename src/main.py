@@ -1,55 +1,65 @@
-import cv2 as cv
-import numpy as np
-from utils.stack_images import stack_images
-from utils.contour_detection import get_contours
-from camera.webcam import init_camera
-from utils.color_detection import detect_color
-from config import *
+import cv2
+from src.camera.webcam import init_camera
+from src.camera.roi_detector import select_roi
+from src.calibration.perspective import compute_perspective_matrix, warp_to_square
+from src.detection.color_detection import detect_colors
+from src.detection.brick_detection import analyze_bricks
+from src.utils.visuals import stack_images
+from src.config.settings import CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT
 
-def callback(x):
-    pass
-
+# ------------------------------
+# Start camera
+# ------------------------------
 video = init_camera(CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT)
-cv.namedWindow(WINDOW_NAME)
-cv.resizeWindow(WINDOW_NAME, FRAME_WIDTH, FRAME_HEIGHT)
-cv.createTrackbar('Min_Thresh', WINDOW_NAME, DEFAULT_MIN_THRESH, 255, callback)
-cv.createTrackbar('Max_Thresh', WINDOW_NAME, DEFAULT_MAX_THRESH, 255, callback)
-cv.createTrackbar('Area', WINDOW_NAME, DEFAULT_MIN_AREA, DEFAULT_MAX_AREA, callback)
 
-while True:
-    frame_available, vid = video.read()
+for _ in range(10):
+    frame_available, frame = video.read()
     if not frame_available:
-        break
+        raise RuntimeError("No frame available")
+    frame = cv2.flip(frame, 1)
 
-    vid_contours = vid.copy()
-    vid_blur = cv.GaussianBlur(vid, (7,7), 1)
-    vid_gray = cv.cvtColor(vid_blur, cv.COLOR_BGR2GRAY)
+# ------------------------------
+# ROI-Selection (live)
+# ------------------------------
+source_points = select_roi(video)
 
-    min_thresh = cv.getTrackbarPos('Min_Thresh', WINDOW_NAME)
-    max_thresh = cv.getTrackbarPos('Max_Thresh', WINDOW_NAME)
-    min_area = cv.getTrackbarPos('Area', WINDOW_NAME)
+# ------------------------------
+# Calculate perspective matrix
+# ------------------------------
+perspective_matrix = compute_perspective_matrix(source_points)
 
-    vid_canny = cv.Canny(vid_gray, min_thresh, max_thresh)
-    kernel = np.ones((5,5))
-    vid_dilated = cv.dilate(vid_canny, kernel, iterations=1)
+# ------------------------------
+# Start main loop
+# ------------------------------
+while True:
+    frame_available, frame = video.read()
+    if not frame_available:
+        continue
+    frame = cv2.flip(frame, 1)
 
-    get_contours(vid_dilated, vid_contours, vid, min_area, WINDOW_NAME)
+    warp = warp_to_square(frame, perspective_matrix)
+    if warp is None:
+        continue
 
-    combined = stack_images(
-        0.8,
-        [
-            [vid, vid_blur, vid_gray],
-            [vid_canny, vid_dilated, vid_contours]
-        ],
-        labels=[
-            ["Original", "Blur", "Gray"],
-            ["Canny", "Dilated", "Contours"]
-        ]
+    hsv = cv2.cvtColor(warp, cv2.COLOR_BGR2HSV)
+
+    # Color & shape detection
+    for color, contours in detect_colors(hsv):
+        analyze_bricks(color, contours, warp)
+
+    # Show stacked result
+    stacked = stack_images(
+        scale=0.7,
+        vid_array=[[frame, warp]],
+        labels=[["Original", "ROI"]]
     )
+    cv2.imshow("Result", stacked)
 
-    cv.imshow(WINDOW_NAME, combined)
-    if cv.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# ------------------------------
+# Clean up
+# ------------------------------
 video.release()
-cv.destroyAllWindows()
+cv2.destroyAllWindows()

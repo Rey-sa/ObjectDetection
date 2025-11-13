@@ -5,7 +5,7 @@ def analyze_bricks(color, contours, warp):
     cm_per_pixel = FIELD_CM / DESTINATION_SIZE
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 300:
+        if area < 500:
             continue
         x, y, w, h = cv2.boundingRect(cnt)
         cx, cy = x + w // 2, y + h // 2

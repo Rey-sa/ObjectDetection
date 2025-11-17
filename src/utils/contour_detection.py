@@ -1,5 +1,6 @@
 import cv2 as cv
-from src.detection.color_detection import detect_color
+from src.detection.color_detection import detect_colors
+
 
 def get_contours(img, output_img, original_frame, area_min):
     contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
@@ -16,7 +17,7 @@ def get_contours(img, output_img, original_frame, area_min):
             roi = original_frame[y:y+h, x:x+w]
 
             # Recognize color
-            color_name = detect_color(roi)
+            color_name = detect_colors(roi)
 
             # Aspect Ratio
             aspect_ratio = w / h

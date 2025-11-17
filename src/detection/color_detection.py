@@ -15,15 +15,14 @@ def detect_colors(hsv):
         upper = np.array(upper, np.uint8)
 
         mask = cv2.inRange(blurred, lower, upper)
-
-        white_mask = cv2.inRange(blurred, np.array(WHITE_MASK_RANGE["lower"], np.uint8),
-                                 np.array(WHITE_MASK_RANGE["upper"], np.uint8))
-
-        mask = cv2.bitwise_and(mask, cv2.bitwise_not(white_mask))
-
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         mask = cv2.dilate(mask, kernel, iterations=1)
+
+        colored_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+        cv2.imshow(f"mask_{name}", colored_mask)
+
 
         # Wenn es "red" oder "red2" heißt → zu kombinierter Rotmaske hinzufügen
         if name.startswith("red"):

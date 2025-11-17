@@ -43,6 +43,8 @@ while True:
 
     hsv = cv2.cvtColor(warp, cv2.COLOR_BGR2HSV)
 
+
+
     # Smoothing
     if 'prev_bricks' not in locals():
         prev_bricks = []
@@ -80,6 +82,8 @@ while True:
         labels=[["Original", "ROI"]]
     )
     cv2.imshow("Result", stacked)
+
+
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

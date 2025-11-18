@@ -1,6 +1,6 @@
 import cv2
 from src.camera.webcam import init_camera
-from src.camera.roi_detector import select_roi
+from src.detection.roi_detector import select_roi
 from src.calibration.perspective import compute_perspective_matrix, warp_to_square
 from src.detection.color_detection import detect_colors
 from src.detection.brick_detection import analyze_bricks

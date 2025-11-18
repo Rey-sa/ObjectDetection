@@ -1,5 +1,5 @@
 # Global configuration
-CAMERA_INDEX = 2
+CAMERA_INDEX = 1
 
 WINDOW_NAME = "LIVE FEED"
 FRAME_WIDTH = 640

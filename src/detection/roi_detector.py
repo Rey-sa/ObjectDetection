@@ -83,6 +83,7 @@ def select_roi(video, auto_detect=True):
                 continue
             frame = cv2.flip(frame, 1)
 
+
             detected = detect_roi_square(frame)
 
             if detected is not None:

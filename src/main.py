@@ -16,7 +16,7 @@ for _ in range(10):
     frame_available, frame = video.read()
     if not frame_available:
         raise RuntimeError("No frame available")
-    frame = cv2.flip(frame, 1)
+    #frame = cv2.flip(frame, 1)
 
 # ------------------------------
 # ROI-Selection (live)

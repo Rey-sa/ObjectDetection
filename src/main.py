@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from src.camera.webcam import init_camera
 from src.detection.roi_detector import select_roi
 from src.calibration.perspective import compute_perspective_matrix, warp_to_square
@@ -20,7 +21,7 @@ for _ in range(10):
     frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
 # ------------------------------
-# ROI-Selection (live)
+# ROI-Detection (live)
 # ------------------------------
 source_points = select_roi(video)
 

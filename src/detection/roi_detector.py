@@ -37,28 +37,30 @@ def detect_roi_square(frame):
                 return points
     return None
 
+
 def sort_points_clockwise(points):
     """
-    Sorts 4 Points clockwise, starting in the left upper corner.
+    Sortiert 4 Punkte: oben-links, oben-rechts, unten-rechts, unten-links
     """
-    points = points[points[:, 1].argsort()]
+    # Methode: Nutze geometrische Eigenschaften
+    rect = np.zeros((4, 2), dtype=np.float32)
 
-    top = points[:2]
-    bottom = points[2:]
+    # Summe: kleinste = oben-links, größte = unten-rechts
+    s = points.sum(axis=1)
+    rect[0] = points[np.argmin(s)]  # top-left
+    rect[2] = points[np.argmax(s)]  # bottom-right
 
-    top = top[top[:, 0].argsort()]
-    bottom = bottom[bottom[:, 0].argsort()[::-1]]
+    # Differenz: kleinste = oben-rechts, größte = unten-links
+    diff = np.diff(points, axis=1)
+    rect[1] = points[np.argmin(diff)]  # top-right
+    rect[3] = points[np.argmax(diff)]  # bottom-left
 
-    return np.array([top[0], top[1], bottom[0], bottom[1]], dtype=np.float32)
+    return rect
 
 
 def select_roi(video, auto_detect=True):
     """
     Chooses ROI - automatic or manual on fallback.
-
-    Args:
-        video: VideoCapture Object
-        auto_detect: If true, try automatic detection
     """
     selected_points = []
     selecting = True
@@ -77,38 +79,56 @@ def select_roi(video, auto_detect=True):
 
     if auto_detect:
         print("Trying automatic roi detection...")
+
+        # Sammle mehrere Detektionen zum Mitteln
+        detected_points_list = []
+
         for attempt in range(30):
             frame_available, frame = video.read()
             if not frame_available:
                 continue
-                # Fix orientation
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
             detected = detect_roi_square(frame)
 
             if detected is not None:
-                selected_points = [tuple(map(int, p)) for p in detected]
-                auto_detected = True
-                print(f"✓ Square ROI detected successfully!")
-                print(f"Points: {selected_points}")
+                detected_points_list.append(detected)
 
-                temp = frame.copy()
-                for i, p in enumerate(selected_points):
-                    cv2.circle(temp, p, 5, (0, 255, 0), -1)
-                    cv2.putText(temp, str(i + 1), (p[0] + 10, p[1]),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                cv2.polylines(temp, [np.array(selected_points)], True, (0, 255, 0), 2)
-                cv2.putText(temp, "Detected automatically! Closing window...",
-                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                cv2.imshow("Camera", temp)
-                cv2.waitKey(2000)
-                selecting = False
-                break
+                # Wenn wir 5 erfolgreiche Detektionen haben, mittle sie
+                if len(detected_points_list) >= 5:
+                    # Mittle alle erkannten Punkte
+                    averaged_points = np.mean(detected_points_list, axis=0).astype(np.float32)
+                    selected_points = [tuple(map(int, p)) for p in averaged_points]
+                    auto_detected = True
+
+                    print(f"✓ Square ROI detected successfully (averaged over {len(detected_points_list)} frames)!")
+                    print(f"Points: {selected_points}")
+
+                    # DEBUG: Zeige Punkt-Reihenfolge mit Farben
+                    temp = frame.copy()
+                    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+                    labels = ["0:TL", "1:TR", "2:BR", "3:BL"]
+
+                    for i, (p, color, label) in enumerate(zip(selected_points, colors, labels)):
+                        cv2.circle(temp, p, 10, color, -1)
+                        cv2.putText(temp, label, (p[0] + 15, p[1]),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+                    cv2.polylines(temp, [np.array(selected_points)], True, (0, 255, 0), 3)
+                    cv2.putText(temp, "Stable ROI detected - closing in 3s...",
+                                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    cv2.imshow("Camera", temp)
+                    cv2.waitKey(3000)
+                    selecting = False
+                    break
 
             # Live stream while searching
             temp = frame.copy()
-            cv2.putText(temp, f"Searching for square ROI... ({attempt + 1}/30)",
+            status = f"Searching for square ROI... ({attempt + 1}/30)"
+            if detected_points_list:
+                status += f" - Found: {len(detected_points_list)}/5"
+            cv2.putText(temp, status,
                         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
             cv2.imshow("Camera", temp)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -128,7 +148,7 @@ def select_roi(video, auto_detect=True):
             frame_available, frame = video.read()
             if not frame_available:
                 continue
-                # Fix orientation
+
             frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
             temp = frame.copy()

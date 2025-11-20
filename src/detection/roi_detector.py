@@ -81,7 +81,8 @@ def select_roi(video, auto_detect=True):
             frame_available, frame = video.read()
             if not frame_available:
                 continue
-            frame = cv2.flip(frame, 1)
+                # Fix orientation
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
 
             detected = detect_roi_square(frame)
@@ -127,7 +128,8 @@ def select_roi(video, auto_detect=True):
             frame_available, frame = video.read()
             if not frame_available:
                 continue
-            frame = cv2.flip(frame, 1)
+                # Fix orientation
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
             temp = frame.copy()
             for i, p in enumerate(selected_points):

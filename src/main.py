@@ -16,7 +16,8 @@ for _ in range(10):
     frame_available, frame = video.read()
     if not frame_available:
         raise RuntimeError("No frame available")
-    #frame = cv2.flip(frame, 1)
+    # Fix orientation
+    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
 # ------------------------------
 # ROI-Selection (live)
@@ -35,7 +36,8 @@ while True:
     frame_available, frame = video.read()
     if not frame_available:
         continue
-    frame = cv2.flip(frame, 1)
+    # Fix orientation
+    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
     warp = warp_to_square(frame, perspective_matrix)
     if warp is None:

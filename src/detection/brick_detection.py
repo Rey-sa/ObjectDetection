@@ -1,65 +1,52 @@
 import cv2
 import numpy as np
-from src.config.settings import DESTINATION_SIZE, FIELD_CM, STUD_CM
+from src.config.settings import DESTINATION_SIZE
 
-def get_brick_size_pca(cnt, cm_per_pixel, STUD_CM):
 
-    # All contour points as float
-    pts = cnt.reshape(-1, 2).astype(np.float32)
+def estimate_brick_type(cnt):
+    rect = cv2.minAreaRect(cnt)
+    width, height = rect[1]
 
-    # PCA
-    mean, eigenvectors, eigenvalues = cv2.PCACompute2(pts, mean=None)
+    if width == 0 or height == 0:
+        return "UNDEFINED"
 
-    # Largest eigenvector = direction of length
-    # eigenvalues = variance along axis → sqrt gives "spread"
-    length  = 2 * np.sqrt(eigenvalues[0][0])
-    width   = 2 * np.sqrt(eigenvalues[1][0])
+    long_side = max(width, height)
+    short_side = min(width, height)
+    ratio = long_side / short_side
 
-    # Convert from pixels → cm
-    length_cm = length * cm_per_pixel
-    width_cm  = width * cm_per_pixel
-
-    # Convert to stud count
-    studs_long = max(1, round(length_cm / STUD_CM))
-    studs_short = max(1, round(width_cm / STUD_CM))
-
-    # Normalize so x ≥ y
-    cols = max(studs_long, studs_short)
-    rows = min(studs_long, studs_short)
-
-    return cols, rows
+    if ratio < 1.2:
+        return "1x1"
+    elif ratio < 1.55:
+        return "2x3"  # ratio ~1.40-1.45
+    elif ratio < 1.78:
+        return "1x2"  # ratio ~1.68-1.72
+    elif ratio < 2.1:
+        return "2x4"  # ratio ~1.84-1.85
+    elif ratio < 2.6:
+        return "1x3"  # ratio ~2.36-2.44
+    else:
+        return "UNDEFINED"
 
 def analyze_bricks(color, contours, warp):
-    cm_per_pixel = FIELD_CM / DESTINATION_SIZE
+    """
+    Analysis all contours of one color and returns a list of bricks.
+    Every brick contains: color, x, y, width, height, nx, ny, type
+    """
     bricks = []
 
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area < 500:
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area < 200:
             continue
 
-        # smooth contour
-        epsilon = 0.02 * cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, epsilon, True)
-
-        # Detect L-shape (non-convex polygon)
-        is_convex = cv2.isContourConvex(approx)
-
-        x, y, w, h = cv2.boundingRect(cnt)
-
-        # center in normalized coords
-        cx, cy = x + w//2, y + h//2
+        # Bounding Boxes for position
+        x, y, w, h = cv2.boundingRect(contour)
+        cx, cy = x + w // 2, y + h // 2
         nx = cx / DESTINATION_SIZE
         ny = 1 - (cy / DESTINATION_SIZE)
 
-        # convert to cm
-        cols, rows = get_brick_size_pca(cnt, cm_per_pixel, STUD_CM)
-
-        # final brick type
-        if not is_convex:
-            brick_type = "L"
-        else:
-            brick_type = f"{cols}x{rows}"
+        # Get type
+        brick_type = estimate_brick_type(contour)
 
         bricks.append({
             "color": color,
